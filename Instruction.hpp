@@ -1,42 +1,27 @@
 #pragma once
 #include <string>
 #include <unordered_map>
+#include <cstdint>
 
-enum class Opcode {
-    NOP,
-    ADD,
-    LW,
-    SW,
-    BEQ
+struct Instruction {
+    uint64_t instruction_address = 0;
+    uint8_t opcode = 0;
+    uint8_t rd = 0;
+    uint8_t rd_used = 0;
+    uint8_t rs1 = 0, rs2 = 0;
+    uint8_t rs1_used = 0, rs2_used = 0;
+    uint16_t condition_flags = 0; // TD: Not know if I defined this right
+    uint64_t mem_addr = 0;
+    uint8_t mem_w = 0, mem_r = 0, br_dir = 0;
+    uint64_t br_target = 0;
 };
 
-struct opcode_details {
-    int in_stage;
-    int out_stage;
-    int n_src_regs;
-    int n_dest_regs;
+/*
+const std::unordered_map<std::string, Instruction> instruction_map{
+    {"NOP", {Opcode::NOP, 0, 0, 0, 0}},
+    {"ADD", {Opcode::ADD, 2, 3, 2, 1}},
+    {"LW",  {Opcode::LW,  2, 4, 1, 1}},
+    {"SW",  {Opcode::SW,  2, 0, 2, 0}},
+    {"BEQ", {Opcode::BEQ, 2, 0, 2, 0}}
 };
-
-// Convert instruction strings to Opcode values
-const std::unordered_map<std::string, Opcode> str_to_opcode{
-    {"NOP", Opcode::NOP},
-    {"ADD", Opcode::ADD},
-    {"LW",  Opcode::LW},
-    {"SW",  Opcode::SW},
-    {"BEQ", Opcode::BEQ}
-};
-
-// Store information about each instruction type
-const std::unordered_map<Opcode, opcode_details> opcode_dict{
-    {Opcode::NOP, {0, 0, 0, 0}},
-    {Opcode::ADD, {2, 3, 2, 1}},
-    {Opcode::LW,  {2, 4, 1, 1}},
-    {Opcode::SW,  {2, 0, 2, 0}},
-    {Opcode::BEQ, {2, 0, 2, 0}}
-};
-
-class Instruction {
-public:
-    Opcode opcode = Opcode::NOP;
-    int reg[3] = {-1, -1, -1}; // reg[0] is destination
-};
+*/

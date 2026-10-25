@@ -1,14 +1,17 @@
 #include "CPU.hpp"
 #include "Instruction.hpp"
+#include <iostream>
+#include <fstream>
+using namespace std;
 
 int stall_count = 0;
 
 int main() {
     bool end_flag = false;
-    std::string opcode;
-    ifstream instruction_file("instructions");
+    string instruction;
+    ifstream instruction_file("instructions", ios::binary);
 
-    while (1) {
+    while (instruction_file.read(reinterpret_cast<char*>(instruction), sizeof(Instruction))) {
     // Make IF later, now here because of file
         WB();
         MEM();
@@ -20,7 +23,10 @@ int main() {
         // ************* IF start ****************
         // TD: Forgot to parse regs
         if (instruction_file >> opcode) {
-            instruction_array[0].opcode == str_to_opcode.at(opcode);
+            instruction_array[0] = instruction_map.at(opcode);
+            for (int in_reg_idx = 0; in_reg_idx < instruction_array[0].n_src_regs; in_reg_idx++) {
+                instruction_array[0].reg[in_reg_idx]
+            }
         } else {
             end_flag = 1; // TD: find a way to end
         }
@@ -36,7 +42,7 @@ int ID() {
             for (int stage_idx=2; stage_idx<5; stage_idx++) {
                 if (instruction_array[stage_idx].reg[0] != 1
                 && instruction_array[1].reg[id_in_idx] == instruction_array[stage_idx].reg[0]) {
-                    stall_count = std::max(opcode_dict[instruction_array[stage_idx].opcode].out_stage
+                    stall_count = max(opcode_dict[instruction_array[stage_idx].opcode].out_stage
                         - stage_idx - opcode_dict[instruction_array[1].opcode].in_stage + 1, stall_count);
             }
         }
