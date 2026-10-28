@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
     }
 
 
-    bool stall = false;
+    bool stall;
 
     ifstream instruction_file("instructions", ios::binary);
 
@@ -69,28 +69,22 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-// TD: I considere forwarding disabled, make a enable flag and handling
-// TD: If this is not called many times do not make it a funciton
-int check_rw_depend(Instruction young, Instruction old) {
+int check_depend(Instruction young, Instruction old) {
     return old.rd_used && ((young.rs1_used && young.rs1 == old.rd)
-    || (young.rs2_used && young.rs2 == old.rd));
+    || (young.rs2_used && young.rs2 == old.rd))
+    || (young.cc_r && old.cc_w);
 }
 
-// TD: Make cases for FWD_EXE and FWD_MEM
 // TD: What about freezes
+// TD: Add other instructions as well, currently considering only CBR, ALU and LD
 int ID(bool &stall, bool FWD_EXE, bool FWD_MEM) {
-    for (int old_idx=2; old_idx<4; old_idx++) {
-        if (check_rw_depend(instruction_array[1], instruction_array[old_idx])) {
-            if (FWD_FLAG) {
-                switch (instruction_array[old_idx].opcode) {
-                    case OP_ALU:
-                        stall 
-                }
-            } else {
-                stall = true;
-            }
-        }
-    }
+    if (check_depend(instruction_array[1], instruction_array[2])
+        && (!FWD_EXE || instruction_array[2].opcode == OP_LD))
+        stall = true;
+    else if (check_depend(instruction_array[1], instruction_array[3]) && !FWD_MEM)
+        stall = true;
+    else
+        stall = false;
 }
 
 int EX() {
