@@ -6,13 +6,16 @@
 typedef enum {
     OP_ALU,
     OP_LD,
-    kristo, // TD: Update, Just taking up 2
-    OP_CBR
+    OP_ST,
+    OP_CBR,
+    OP_OTHER,
+    NUM_OP_TYPE,
+    NOP = 127
 } Opcode;
 
 struct Instruction {
     uint64_t instruction_address = 0;
-    uint8_t opcode = 0;
+    uint8_t opcode = 127;
     uint8_t rd = 0;
     uint8_t rd_used = 0;
     uint8_t rs1 = 0, rs2 = 0;

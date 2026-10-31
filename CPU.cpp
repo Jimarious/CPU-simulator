@@ -56,17 +56,33 @@ int main(int argc, char *argv[]) {
     }
 
 
-    bool stall;
+    bool stall = false;
+    bool end = false;
 
     ifstream instruction_file("instructions", ios::binary);
 
-    while (instruction_file.read(reinterpret_cast<char*>(&instruction_array[0]), sizeof(Instruction))) {
+    while (1) {
         instruction_array[4] = instruction_array[3];
         instruction_array[3] = instruction_array[2];
+        if (!stall) {
+            instruction_array[2] = instruction_array[1];
+            instruction_array[1] = instruction_array[0];
+            if (end) {
+                instruction_array[0] = Instruction{};
+                if (instruction_array == std::array<Instruction,5>{})
+                    return 0;
+            } else if (!instruction_file.read(reinterpret_cast<char*>(&instruction_array[0]),
+            sizeof(Instruction))) {
+                instruction_file.close();
+                end = true;
+            }
+        } else
+            instruction_array[2] = Instruction{};
+        ID();
+        EX();
+        MEM();
+        WB();
     }
-
-    instruction_file.close();
-    return 0;
 }
 
 int check_depend(Instruction young, Instruction old) {
@@ -75,7 +91,7 @@ int check_depend(Instruction young, Instruction old) {
     || (young.cc_r && old.cc_w);
 }
 
-// TD: What about freezes
+// TD: What about freezes, make the actual stall handling
 // TD: Add other instructions as well, currently considering only CBR, ALU and LD
 int ID(bool &stall, bool FWD_EXE, bool FWD_MEM) {
     if (check_depend(instruction_array[1], instruction_array[2])
