@@ -4,9 +4,11 @@
 #include <fstream>
 #include <charconv>
 #include <cstring>
+#include <algorithm>
 
 using namespace std;
 
+// TD: Make a PL class in order to not pass parameters
 int main(int argc, char *argv[]) {
     // TD: Make it read compressed files later
     int PIPE_WIDTH = 1;
@@ -69,16 +71,20 @@ int main(int argc, char *argv[]) {
             instruction_array[1] = instruction_array[0];
             if (end) {
                 instruction_array[0] = Instruction{};
-                if (instruction_array == std::array<Instruction,5>{})
+                if (std::all_of(instruction_array,[](Instruction instruction){
+                    return instruction.opcode == NOP;
+                }))
                     return 0;
             } else if (!instruction_file.read(reinterpret_cast<char*>(&instruction_array[0]),
             sizeof(Instruction))) {
                 instruction_file.close();
+                instruction_array[0] = Instruction{};
                 end = true;
             }
         } else
             instruction_array[2] = Instruction{};
-        ID();
+
+        ID(stall, FWD_EXE, FWD_MEM);
         EX();
         MEM();
         WB();
@@ -91,7 +97,7 @@ int check_depend(Instruction young, Instruction old) {
     || (young.cc_r && old.cc_w);
 }
 
-// TD: What about freezes, make the actual stall handling
+
 // TD: Add other instructions as well, currently considering only CBR, ALU and LD
 int ID(bool &stall, bool FWD_EXE, bool FWD_MEM) {
     if (check_depend(instruction_array[1], instruction_array[2])
