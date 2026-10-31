@@ -1,4 +1,4 @@
-#include "CPU.hpp"
+#include "Pipeline.hpp"
 #include "Instruction.hpp"
 #include <iostream>
 #include <fstream>
@@ -8,13 +8,8 @@
 
 using namespace std;
 
-// TD: Make a PL class in order to not pass parameters
 int main(int argc, char *argv[]) {
     // TD: Make it read compressed files later
-    int PIPE_WIDTH = 1;
-    int BR_PRED = 0;
-    bool FWD_EXE = false;
-    bool FWD_MEM = false;
     ifstream instruction_file;
     // TD: Only trace is essential make default handling for all other values and handle them
     for (int arg_idx = 1; arg_idx < argc; arg_idx++) {
@@ -64,30 +59,7 @@ int main(int argc, char *argv[]) {
     ifstream instruction_file("instructions", ios::binary);
 
     while (1) {
-        instruction_array[4] = instruction_array[3];
-        instruction_array[3] = instruction_array[2];
-        if (!stall) {
-            instruction_array[2] = instruction_array[1];
-            instruction_array[1] = instruction_array[0];
-            if (end) {
-                instruction_array[0] = Instruction{};
-                if (std::all_of(instruction_array,[](Instruction instruction){
-                    return instruction.opcode == NOP;
-                }))
-                    return 0;
-            } else if (!instruction_file.read(reinterpret_cast<char*>(&instruction_array[0]),
-            sizeof(Instruction))) {
-                instruction_file.close();
-                instruction_array[0] = Instruction{};
-                end = true;
-            }
-        } else
-            instruction_array[2] = Instruction{};
-
-        ID(stall, FWD_EXE, FWD_MEM);
-        EX();
-        MEM();
-        WB();
+        p.cycle();
     }
 }
 
