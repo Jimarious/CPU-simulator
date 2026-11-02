@@ -1,4 +1,4 @@
-echo "no forwarding"
 ./main trace_first_run.bin
-echo "with forwarding"
-./main trace_first_run.bin -forwarding=1
+./main trace_first_run.bin -enableexefwd
+./main trace_first_run.bin -enablememfwd
+./main trace_first_run.bin -enableexefwd -enablememfwd
