@@ -8,7 +8,6 @@ typedef enum {
     OP_ST,
     OP_CBR,
     OP_OTHER,
-    NUM_OP_TYPE,
     NOP = 127
 } Opcode;
 

@@ -93,7 +93,7 @@ int Pipeline::get_cycles() {
     return cycle_count;
 }
 
-// TD: Add other instructions as well, currently considering only CBR, ALU and LD
+// TD: OP_OTHER outputs at EXE, after this make a trace file generator that encodes actual consume-produce stages.
 void Pipeline::ID() {
     if (check_depend(instruction_array[1], instruction_array[2])
         && (!FWD_EXE || instruction_array[2].opcode == OP_LD))
