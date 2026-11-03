@@ -1,10 +1,12 @@
-#include "instruction.hpp"
 #include "pipeline.hpp"
 #include <iostream>
 #include <fstream>
 #include <charconv>
 #include <cstring>
 #include <algorithm>
+#include <filesystem>
+#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/device/file.hpp>
 
 using namespace std;
 
@@ -16,7 +18,6 @@ int check_depend(Instruction young, Instruction old) {
 
 
 Pipeline::Pipeline(int argc, char *argv[]) {
-    // TD: Make it read compressed files later
     for (int arg_idx = 1; arg_idx < argc; arg_idx++) {
         if (!strcmp(argv[arg_idx], "-pipewidth")) {
             if (++arg_idx == argc) {
@@ -40,15 +41,22 @@ Pipeline::Pipeline(int argc, char *argv[]) {
             FWD_EXE = true;
         } else if (!strcmp(argv[arg_idx], "-enablememfwd")) {
             FWD_MEM = true;
-        } else {
-            instruction_file.open(argv[arg_idx], ios::binary);
-            if(!instruction_file.is_open()) {
-                throw runtime_error(string("Invalid parameter: \"") + argv[arg_idx] + "\"\n");
+        } else if (std::filesystem::is_regular_file(argv[arg_idx])) {
+            if (instruction_file.is_complete()) {
+                throw runtime_error("Multiple files provided\n");
             }
+            boost::iostreams::file_source instruction_file_gz(argv[arg_idx], ios::binary);
+            if(!instruction_file_gz.is_open()) {
+                throw runtime_error(string("Problem opening: \"") + argv[arg_idx] + "\"\n");
+            }
+            instruction_file.push(boost::iostreams::gzip_decompressor());
+            instruction_file.push(instruction_file_gz);
+        } else {
+            throw runtime_error("Invalide argument provided\n");
         }
     }
-    if (!instruction_file.is_open() || instruction_file.fail()) {
-        throw runtime_error("Multiple or no trace files provided\n");
+    if (!instruction_file.is_complete()) {
+        throw runtime_error("No trace file provided\n");
     }
 }
 
@@ -67,7 +75,6 @@ void Pipeline::run() {
                     return;
             } else if (!instruction_file.read(reinterpret_cast<char*>(&instruction_array[0]),
             sizeof(Instruction))) {
-                instruction_file.close();
                 instruction_array[0] = Instruction{};
                 end = true;
             }

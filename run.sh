@@ -1,4 +1,4 @@
-./main trace_first_run.bin
-./main trace_first_run.bin -enableexefwd
-./main trace_first_run.bin -enablememfwd
-./main trace_first_run.bin -enableexefwd -enablememfwd
+./main trace_first_run.bin.gz
+./main trace_first_run.bin.gz -enableexefwd
+./main trace_first_run.bin.gz -enablememfwd
+./main trace_first_run.bin.gz -enableexefwd -enablememfwd

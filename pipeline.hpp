@@ -1,9 +1,8 @@
-#pragma once
-
 #include "instruction.hpp"
 #include <optional>
 #include <array>
 #include <fstream>
+#include <boost/iostreams/filtering_stream.hpp>
 
 class Pipeline {
 public:
@@ -17,7 +16,7 @@ private:
     bool FWD_EXE = false, FWD_MEM = false;
     bool stall = false;
     bool end = false;
-    std::ifstream instruction_file;
+    boost::iostreams::filtering_istream instruction_file;
     std::array<Instruction, 5> instruction_array;
 
     int cycle_count = 0;
