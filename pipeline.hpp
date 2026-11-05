@@ -14,10 +14,10 @@ private:
     int PIPE_WIDTH = 1;
     int BR_PRED = 0;
     bool FWD_EXE = false, FWD_MEM = false;
-    bool stall = false;
+    std::vector<bool> stall;
     bool end = false;
     boost::iostreams::filtering_istream instruction_file;
-    std::array<Instruction, 5> instruction_array;
+    std::vector<Instruction> instruction_array[5];
 
     int cycle_count = 0;
 

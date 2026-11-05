@@ -27,6 +27,9 @@ Pipeline::Pipeline(int argc, char *argv[]) {
             if (err != errc{} || ptr != argv[arg_idx]+strlen(argv[arg_idx])
                 || PIPE_WIDTH < 1 || PIPE_WIDTH > 8)  {
                 throw runtime_error("Invalid pipewidth value\n");
+            } else {
+                for (int i=0; i<5; i++)  instruction_array[i].resize(PIPE_WIDTH);
+                stall.resize(PIPE_WIDTH);
             }
         } else if (!strcmp(argv[arg_idx], "-bpredpolicy")) {
             if (++arg_idx == argc) {
@@ -52,35 +55,40 @@ Pipeline::Pipeline(int argc, char *argv[]) {
             instruction_file.push(boost::iostreams::gzip_decompressor());
             instruction_file.push(instruction_file_gz);
         } else {
-            throw runtime_error("Invalide argument provided\n");
+            throw runtime_error(string("Invalide argument or non existing file: \"")
+            + argv[arg_idx] + "\"\n");
         }
     }
     if (!instruction_file.is_complete()) {
         throw runtime_error("No trace file provided\n");
     }
+    ranges::fill(stall, false);
 }
 
 void Pipeline::run() {
     while (1) {
         instruction_array[4] = instruction_array[3];
         instruction_array[3] = instruction_array[2];
-        if (!stall) {
-            instruction_array[2] = instruction_array[1];
-            instruction_array[1] = instruction_array[0];
-            if (end) {
-                instruction_array[0] = Instruction{};
-                if (ranges::all_of(instruction_array,[](Instruction instruction){
-                    return instruction.opcode == NOP;
-                }))
-                    return;
-            } else if (!instruction_file.read(reinterpret_cast<char*>(&instruction_array[0]),
-            sizeof(Instruction))) {
-                instruction_array[0] = Instruction{};
-                end = true;
-            }
-        } else
-            instruction_array[2] = Instruction{};
-
+        for (int lane=0; lane<PIPE_WIDTH; lane++) {
+            if (!stall[lane]) { // TD: Check efficiency
+                instruction_array[2][lane] = instruction_array[1][lane];
+                instruction_array[1][lane] = instruction_array[0][lane];
+                if (end) {
+                    instruction_array[0][lane] = Instruction{};
+                    if (!lane && ranges::all_of(instruction_array, [](vector<Instruction> stage){
+                        return ranges::all_of(stage, [](Instruction instruction){
+                            return instruction.opcode == NOP;
+                        });
+                    }))
+                        return;
+                } else if (!instruction_file.read(reinterpret_cast<char*>(&instruction_array[0]),
+                sizeof(Instruction))) {
+                    instruction_array[0][lane] = Instruction{};
+                    end = true;
+                }
+            } else
+                instruction_array[2][lane] = Instruction{};
+        }
         ID();
         EX();
         /*MEM();
@@ -95,13 +103,22 @@ int Pipeline::get_cycles() {
 
 // TD: OP_OTHER outputs at EXE, after this make a trace file generator that encodes actual consume-produce stages.
 void Pipeline::ID() {
-    if (check_depend(instruction_array[1], instruction_array[2])
-        && (!FWD_EXE || instruction_array[2].opcode == OP_LD))
-        stall = true;
-    else if (check_depend(instruction_array[1], instruction_array[3]) && !FWD_MEM)
-        stall = true;
-    else
-        stall = false;
+    // TD: Now there are are data hazards in the same stage as well, also implement loop over lanes
+    for (int lane_young=0; lane_young<PIPE_WIDTH; lane_young++) {
+        for (int lane_old=0; lane_old<PIPE_WIDTH; lane_old++) {
+            if (lane_young < lane_old) {
+                if (check_depend(instruction_array[1][lane_young], instruction_array[1][lane_old]))
+                    stall[lane_young] = true;
+            }
+            if (check_depend(instruction_array[1][lane_young], instruction_array[2][lane_old])
+                && (!FWD_EXE || instruction_array[2][lane_old].opcode == OP_LD))
+                stall[lane_young] = true;
+            else if (check_depend(instruction_array[1][lane_young], instruction_array[3][lane_old]) && !FWD_MEM)
+                stall[lane_young] = true;
+            else
+                stall[lane_young] = false;
+        }
+    }
 }
 
 void Pipeline::EX() {
