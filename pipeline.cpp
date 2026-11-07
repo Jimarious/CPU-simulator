@@ -60,33 +60,32 @@ Pipeline::Pipeline(int argc, char *argv[]) {
         throw runtime_error("No trace file provided\n");
     }
     for (int i=0; i<5; i++)  instruction_array[i].resize(PIPE_WIDTH);
-    stall.resize(PIPE_WIDTH);
-    fill(stall.begin(), stall.end(), false);
+    min_stalled_lane = PIPE_WIDTH;
 }
 
 void Pipeline::run() {
     while (1) {
         instruction_array[4] = instruction_array[3];
         instruction_array[3] = instruction_array[2];
-        for (int lane=0; lane<PIPE_WIDTH; lane++) {
-            if (!stall[lane]) { // TD: Check efficiency
-                instruction_array[2][lane] = instruction_array[1][lane];
-                instruction_array[1][lane] = instruction_array[0][lane];
-                if (end) {
-                    instruction_array[0][lane] = Instruction{};
-                    if (!lane && ranges::all_of(instruction_array, [](vector<Instruction> stage){
-                        return ranges::all_of(stage, [](Instruction instruction){
-                            return instruction.opcode == NOP;
-                        });
-                    }))
-                        return;
-                } else if (!instruction_file.read(reinterpret_cast<char*>(&instruction_array[0][lane]),
-                sizeof(Instruction))) {
-                    instruction_array[0][lane] = Instruction{};
-                    end = true;
-                }
-            } else
-                instruction_array[2][lane] = Instruction{};
+        for (int lane=0; lane<min_stalled_lane; lane++) {
+            instruction_array[2][lane] = instruction_array[1][lane];
+            instruction_array[1][lane] = instruction_array[0][lane];
+            if (end) {
+                instruction_array[0][lane] = Instruction{};
+                if (!lane && ranges::all_of(instruction_array, [](vector<Instruction> stage){
+                    return ranges::all_of(stage, [](Instruction instruction){
+                        return instruction.opcode == NOP;
+                    });
+                }))
+                    return;
+            } else if (!instruction_file.read(reinterpret_cast<char*>(&instruction_array[0][lane]),
+            sizeof(Instruction))) {
+                instruction_array[0][lane] = Instruction{};
+                end = true;
+            }
+        }
+        for (int lane=min_stalled_lane; lane<PIPE_WIDTH; lane++) {
+            instruction_array[2][lane] = Instruction{};
         }
         ID();
         EX();
@@ -105,17 +104,16 @@ void Pipeline::ID() {
     // TD: Now there are are data hazards in the same stage as well, also implement loop over lanes
     for (int lane_young=0; lane_young<PIPE_WIDTH; lane_young++) {
         for (int lane_old=0; lane_old<PIPE_WIDTH; lane_old++) {
-            if (lane_young < lane_old) {
-                if (check_depend(instruction_array[1][lane_young], instruction_array[1][lane_old]))
-                    stall[lane_young] = true;
-            }
+            if (lane_young > lane_old
+            && check_depend(instruction_array[1][lane_young], instruction_array[1][lane_old]))
+                min_stalled_lane = min(min_stalled_lane, lane_young);
             if (check_depend(instruction_array[1][lane_young], instruction_array[2][lane_old])
-                && (!FWD_EXE || instruction_array[2][lane_old].opcode == OP_LD))
-                stall[lane_young] = true;
+            && (!FWD_EXE || instruction_array[2][lane_old].opcode == OP_LD))
+                min_stalled_lane = min(min_stalled_lane, lane_young);
             else if (check_depend(instruction_array[1][lane_young], instruction_array[3][lane_old]) && !FWD_MEM)
-                stall[lane_young] = true;
+                min_stalled_lane = min(min_stalled_lane, lane_young);
             else
-                stall[lane_young] = false;
+                min_stalled_lane = PIPE_WIDTH;
         }
     }
 }

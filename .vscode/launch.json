@@ -9,7 +9,9 @@
             "program": "${workspaceFolder}/simulator_dbg",
 
             "args": [
-                "a2_dependency_test.bin.gz"
+                "a2_dependency_test.bin.gz",
+                "-pipewidth",
+                "2"
             ],
 
             "stopAtEntry": false,

@@ -14,7 +14,7 @@ private:
     int PIPE_WIDTH = 1;
     int BR_PRED = 0;
     bool FWD_EXE = false, FWD_MEM = false;
-    std::vector<bool> stall;
+    int min_stalled_lane;
     bool end = false;
     boost::iostreams::filtering_istream instruction_file;
     std::vector<Instruction> instruction_array[5];
