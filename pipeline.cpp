@@ -101,7 +101,7 @@ int Pipeline::get_cycles() {
 
 // TD: OP_OTHER outputs at EXE, after this make a trace file generator that encodes actual consume-produce stages.
 void Pipeline::ID() {
-    // TD: Now there are are data hazards in the same stage as well, also implement loop over lanes
+    min_stalled_lane = PIPE_WIDTH;
     for (int lane_young=0; lane_young<PIPE_WIDTH; lane_young++) {
         for (int lane_old=0; lane_old<PIPE_WIDTH; lane_old++) {
             if (lane_young > lane_old
@@ -112,8 +112,6 @@ void Pipeline::ID() {
                 min_stalled_lane = min(min_stalled_lane, lane_young);
             else if (check_depend(instruction_array[1][lane_young], instruction_array[3][lane_old]) && !FWD_MEM)
                 min_stalled_lane = min(min_stalled_lane, lane_young);
-            else
-                min_stalled_lane = PIPE_WIDTH;
         }
     }
 }
