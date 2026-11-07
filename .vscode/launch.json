@@ -1,0 +1,34 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Pipeline Simulator",
+            "type": "cppdbg",
+            "request": "launch",
+
+            "program": "${workspaceFolder}/simulator_dbg",
+
+            "args": [
+                "a2_dependency_test.bin.gz"
+            ],
+
+            "stopAtEntry": false,
+
+            "cwd": "${workspaceFolder}",
+
+            "externalConsole": false,
+
+            "MIMode": "gdb",
+
+            "miDebuggerPath": "/usr/bin/gdb",
+
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}

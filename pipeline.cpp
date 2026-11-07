@@ -27,9 +27,6 @@ Pipeline::Pipeline(int argc, char *argv[]) {
             if (err != errc{} || ptr != argv[arg_idx]+strlen(argv[arg_idx])
                 || PIPE_WIDTH < 1 || PIPE_WIDTH > 8)  {
                 throw runtime_error("Invalid pipewidth value\n");
-            } else {
-                for (int i=0; i<5; i++)  instruction_array[i].resize(PIPE_WIDTH);
-                stall.resize(PIPE_WIDTH);
             }
         } else if (!strcmp(argv[arg_idx], "-bpredpolicy")) {
             if (++arg_idx == argc) {
@@ -55,14 +52,16 @@ Pipeline::Pipeline(int argc, char *argv[]) {
             instruction_file.push(boost::iostreams::gzip_decompressor());
             instruction_file.push(instruction_file_gz);
         } else {
-            throw runtime_error(string("Invalide argument or non existing file: \"")
+            throw runtime_error(string("Invalid argument or non existing file: \"")
             + argv[arg_idx] + "\"\n");
         }
     }
     if (!instruction_file.is_complete()) {
         throw runtime_error("No trace file provided\n");
     }
-    ranges::fill(stall, false);
+    for (int i=0; i<5; i++)  instruction_array[i].resize(PIPE_WIDTH);
+    stall.resize(PIPE_WIDTH);
+    fill(stall.begin(), stall.end(), false);
 }
 
 void Pipeline::run() {
@@ -81,7 +80,7 @@ void Pipeline::run() {
                         });
                     }))
                         return;
-                } else if (!instruction_file.read(reinterpret_cast<char*>(&instruction_array[0]),
+                } else if (!instruction_file.read(reinterpret_cast<char*>(&instruction_array[0][lane]),
                 sizeof(Instruction))) {
                     instruction_array[0][lane] = Instruction{};
                     end = true;
