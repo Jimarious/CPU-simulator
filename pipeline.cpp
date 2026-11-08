@@ -63,13 +63,21 @@ Pipeline::Pipeline(int argc, char *argv[]) {
     min_stalled_lane = PIPE_WIDTH;
 }
 
-void Pipeline::run() {
+void Pipeline::run() { // stalls are one stage earlier so that only IF needs sort
     while (1) {
         instruction_array[4] = instruction_array[3];
         instruction_array[3] = instruction_array[2];
+        instruction_array[2] = instruction_array[1];
         for (int lane=0; lane<min_stalled_lane; lane++) {
-            instruction_array[2][lane] = instruction_array[1][lane];
             instruction_array[1][lane] = instruction_array[0][lane];
+        }
+        for (int lane=min_stalled_lane; lane<PIPE_WIDTH; lane++) {
+            instruction_array[1][lane] = Instruction{};
+        }
+        for (int lane=0; lane<PIPE_WIDTH-min_stalled_lane; lane++) {
+            instruction_array[0][lane] = instruction_array[0][min_stalled_lane+lane];
+        }
+        for (int lane=PIPE_WIDTH-min_stalled_lane; lane<PIPE_WIDTH; lane++) {
             if (end) {
                 instruction_array[0][lane] = Instruction{};
                 if (!lane && ranges::all_of(instruction_array, [](vector<Instruction> stage){
@@ -83,9 +91,6 @@ void Pipeline::run() {
                 instruction_array[0][lane] = Instruction{};
                 end = true;
             }
-        }
-        for (int lane=min_stalled_lane; lane<PIPE_WIDTH; lane++) {
-            instruction_array[2][lane] = Instruction{};
         }
         ID();
         EX();
@@ -105,12 +110,12 @@ void Pipeline::ID() {
     for (int lane_young=0; lane_young<PIPE_WIDTH; lane_young++) {
         for (int lane_old=0; lane_old<PIPE_WIDTH; lane_old++) {
             if (lane_young > lane_old
-            && check_depend(instruction_array[1][lane_young], instruction_array[1][lane_old]))
+            && check_depend(instruction_array[0][lane_young], instruction_array[0][lane_old]))
                 min_stalled_lane = min(min_stalled_lane, lane_young);
-            if (check_depend(instruction_array[1][lane_young], instruction_array[2][lane_old])
-            && (!FWD_EXE || instruction_array[2][lane_old].opcode == OP_LD))
+            if (check_depend(instruction_array[0][lane_young], instruction_array[1][lane_old])
+            && (!FWD_EXE || instruction_array[1][lane_old].opcode == OP_LD))
                 min_stalled_lane = min(min_stalled_lane, lane_young);
-            else if (check_depend(instruction_array[1][lane_young], instruction_array[3][lane_old]) && !FWD_MEM)
+            else if (check_depend(instruction_array[0][lane_young], instruction_array[2][lane_old]) && !FWD_MEM)
                 min_stalled_lane = min(min_stalled_lane, lane_young);
         }
     }
