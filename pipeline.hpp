@@ -15,13 +15,14 @@ private:
     int BR_PRED = 0;
     bool FWD_EXE = false, FWD_MEM = false;
     int min_stalled_lane;
+    bool flush = false;
     bool end = false;
     boost::iostreams::filtering_istream instruction_file;
     std::vector<Instruction> instruction_array[5];
 
     int cycle_count = 0;
 
-
+    void IF();
     void ID();
     void EX();
     void MEM();

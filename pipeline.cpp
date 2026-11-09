@@ -68,40 +68,48 @@ void Pipeline::run() { // stalls are one stage earlier so that only IF needs sor
         instruction_array[4] = instruction_array[3];
         instruction_array[3] = instruction_array[2];
         instruction_array[2] = instruction_array[1];
+        // The flush must be able to move on
         for (int lane=0; lane<min_stalled_lane; lane++) {
             instruction_array[1][lane] = instruction_array[0][lane];
         }
         for (int lane=min_stalled_lane; lane<PIPE_WIDTH; lane++) {
             instruction_array[1][lane] = Instruction{};
         }
-        for (int lane=0; lane<PIPE_WIDTH-min_stalled_lane; lane++) {
-            instruction_array[0][lane] = instruction_array[0][min_stalled_lane+lane];
-        }
-        for (int lane=PIPE_WIDTH-min_stalled_lane; lane<PIPE_WIDTH; lane++) {
-            if (end) {
-                instruction_array[0][lane] = Instruction{};
-                if (!lane && ranges::all_of(instruction_array, [](vector<Instruction> stage){
-                    return ranges::all_of(stage, [](Instruction instruction){
-                        return instruction.opcode == NOP;
-                    });
-                }))
-                    return;
-            } else if (!instruction_file.read(reinterpret_cast<char*>(&instruction_array[0][lane]),
-            sizeof(Instruction))) {
-                instruction_array[0][lane] = Instruction{};
-                end = true;
-            }
-        }
+        IF();
         ID();
         EX();
-        /*MEM();
-        WB();*/
+        MEM();
+        //WB();
         cycle_count++;
     }
 }
 
 int Pipeline::get_cycles() {
     return cycle_count;
+}
+
+void Pipeline::IF() {
+    for (int lane=0; lane<PIPE_WIDTH-min_stalled_lane; lane++) {
+        instruction_array[0][lane] = instruction_array[0][min_stalled_lane+lane];
+    }
+    for (int lane=PIPE_WIDTH-min_stalled_lane; lane<PIPE_WIDTH; lane++) {
+        if (end || flush) {
+            instruction_array[0][lane] = Instruction{};
+            if (!lane && end && ranges::all_of(instruction_array, [](vector<Instruction> stage){
+                return ranges::all_of(stage, [](Instruction instruction){
+                    return instruction.opcode == NOP;
+                });
+            }))
+                return;
+        } else if (!instruction_file.read(reinterpret_cast<char*>(&instruction_array[0][lane]),
+        sizeof(Instruction))) {
+            instruction_array[0][lane] = Instruction{};
+            end = true;
+        } else if (instruction_array[0][lane].opcode == OP_CBR && !instruction_array[0][lane].br_dir) {
+            instruction_array[0][lane].br_dir = 2; // 2 indicates misprediction for MEM
+            flush = true;
+        }
+    }
 }
 
 // TD: OP_OTHER outputs at EXE, after this make a trace file generator that encodes actual consume-produce stages.
@@ -122,5 +130,13 @@ void Pipeline::ID() {
 }
 
 void Pipeline::EX() {
-    // TD: Implement
+}
+
+void Pipeline:: MEM() {
+    for (int lane=0; lane<PIPE_WIDTH; lane++) {
+        if (instruction_array[0][lane].opcode == OP_CBR && instruction_array[0][lane].br_dir == 2) {
+            flush = true;
+            break;
+        }
+    }
 }
