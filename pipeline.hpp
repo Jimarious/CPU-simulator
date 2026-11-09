@@ -8,7 +8,10 @@ class Pipeline {
 public:
     Pipeline (int argc, char *argv[]);
     void run();
-    int get_cycles();
+    int get_cycle_count();
+    int get_instruction_count();
+    int get_total_br_count();
+    int get_mispred_br_count();
 
 private:
     int PIPE_WIDTH = 1;
@@ -20,7 +23,10 @@ private:
     boost::iostreams::filtering_istream instruction_file;
     std::vector<Instruction> instruction_array[5];
 
+    int instruction_count = 0;
     int cycle_count = 0;
+    int total_br_count = 0;
+    int mispred_br_count = 0;
 
     void IF();
     void ID();

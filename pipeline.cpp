@@ -68,7 +68,6 @@ void Pipeline::run() { // stalls are one stage earlier so that only IF needs sor
         instruction_array[4] = instruction_array[3];
         instruction_array[3] = instruction_array[2];
         instruction_array[2] = instruction_array[1];
-        // The flush must be able to move on
         for (int lane=0; lane<min_stalled_lane; lane++) {
             instruction_array[1][lane] = instruction_array[0][lane];
         }
@@ -76,6 +75,11 @@ void Pipeline::run() { // stalls are one stage earlier so that only IF needs sor
             instruction_array[1][lane] = Instruction{};
         }
         IF();
+        if (end && ranges::all_of(instruction_array, [](vector<Instruction> stage){
+            return ranges::all_of(stage, [](Instruction instruction){
+                return instruction.opcode == NOP;
+            });
+        })) return;
         ID();
         EX();
         MEM();
@@ -84,8 +88,20 @@ void Pipeline::run() { // stalls are one stage earlier so that only IF needs sor
     }
 }
 
-int Pipeline::get_cycles() {
+int Pipeline::get_instruction_count() {
+    return instruction_count;
+}
+
+int Pipeline::get_cycle_count() {
     return cycle_count;
+}
+
+int Pipeline::get_total_br_count() {
+    return total_br_count;
+}
+
+int Pipeline::get_mispred_br_count() {
+    return mispred_br_count;
 }
 
 void Pipeline::IF() {
@@ -95,19 +111,20 @@ void Pipeline::IF() {
     for (int lane=PIPE_WIDTH-min_stalled_lane; lane<PIPE_WIDTH; lane++) {
         if (end || flush) {
             instruction_array[0][lane] = Instruction{};
-            if (!lane && end && ranges::all_of(instruction_array, [](vector<Instruction> stage){
-                return ranges::all_of(stage, [](Instruction instruction){
-                    return instruction.opcode == NOP;
-                });
-            }))
-                return;
         } else if (!instruction_file.read(reinterpret_cast<char*>(&instruction_array[0][lane]),
         sizeof(Instruction))) {
             instruction_array[0][lane] = Instruction{};
             end = true;
-        } else if (instruction_array[0][lane].opcode == OP_CBR && !instruction_array[0][lane].br_dir) {
-            instruction_array[0][lane].br_dir = 2; // 2 indicates misprediction for MEM
-            flush = true;
+        } else {
+            instruction_count++;
+            if (instruction_array[0][lane].opcode == OP_CBR) {
+                total_br_count++;
+                if (BR_PRED == 1 && !instruction_array[0][lane].br_dir) {
+                    mispred_br_count++;
+                    instruction_array[0][lane].br_dir |= 2; // 10 indicates misprediction for MEM
+                    flush = true;
+                }
+            }
         }
     }
 }
@@ -134,8 +151,8 @@ void Pipeline::EX() {
 
 void Pipeline:: MEM() {
     for (int lane=0; lane<PIPE_WIDTH; lane++) {
-        if (instruction_array[0][lane].opcode == OP_CBR && instruction_array[0][lane].br_dir == 2) {
-            flush = true;
+        if (instruction_array[3][lane].opcode == OP_CBR && instruction_array[3][lane].br_dir & 0b00000010) {
+            flush = false;
             break;
         }
     }
