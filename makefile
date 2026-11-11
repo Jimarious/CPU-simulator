@@ -1,8 +1,15 @@
-FLAGS = -std=c++20 -c
-DBGFLAGS = -std=c++20 -g -O0 -Wall -Wextra -c
+FLAGS = -std=c++20 -c -MP -MDD
+DBGFLAGS = -std=c++20 -g -O0 -Wall -Wextra -c -MP -MDD
 
-simulator: pipeline.o simulator.o
-	g++ simulator.o pipeline.o -o simulator -lboost_iostreams
+OBJ:
+	mkdir -p build/obj
+	OBJ = build/obj
+
+BIN:
+	mkdir -p build/bin
+
+$(BIN)/simulator: $(OBJ)/%
+	g++ $(OBJ)/% -o $@ -lboost_iostreams
 
 pipeline.o: pipeline.cpp pipeline.hpp instruction.hpp
 	g++ $(FLAGS) pipeline.cpp -o pipeline.o
@@ -10,8 +17,11 @@ pipeline.o: pipeline.cpp pipeline.hpp instruction.hpp
 simulator.o: simulator.cpp pipeline.hpp instruction.hpp
 	g++ $(FLAGS) simulator.cpp -o simulator.o
 
+gshare.o: gshare.cpp gshare.hpp
+	g++ $(FLAGS) gshare.cpp -o gshare.o
+
 clean:
-	rm -f simulator.o pipeline.o simulator
+	rm -f simulator.o pipeline.o gshare.o simulator
 
 
 simulator_dbg: simulator_dbg.o pipeline_dbg.o

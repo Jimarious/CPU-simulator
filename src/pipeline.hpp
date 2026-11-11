@@ -1,4 +1,5 @@
 #include "instruction.hpp"
+#include "gshare.hpp"
 #include <optional>
 #include <array>
 #include <fstream>
@@ -22,6 +23,7 @@ private:
     bool end = false;
     boost::iostreams::filtering_istream instruction_file;
     std::vector<Instruction> instruction_array[5];
+    std::optional<Gshare> gshare;
 
     int instruction_count = 0;
     int cycle_count = 0;

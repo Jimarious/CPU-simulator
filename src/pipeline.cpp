@@ -37,6 +37,9 @@ Pipeline::Pipeline(int argc, char *argv[]) {
                 || BR_PRED < 0 || BR_PRED > 2) {
                     throw runtime_error("Invalid bpredpolicy value\n");
             }
+            if (BR_PRED == 2) {
+                gshare.emplace();
+            }
         } else if (!strcmp(argv[arg_idx], "-enableexefwd")) {
             FWD_EXE = true;
         } else if (!strcmp(argv[arg_idx], "-enablememfwd")) {
@@ -119,7 +122,9 @@ void Pipeline::IF() {
             instruction_count++;
             if (instruction_array[0][lane].opcode == OP_CBR) {
                 total_br_count++;
-                if (BR_PRED == 1 && !instruction_array[0][lane].br_dir) {
+                if ((BR_PRED == 1 && !instruction_array[0][lane].br_dir) || (BR_PRED == 2
+                && gshare->predict(instruction_array[0][lane].instruction_address & 0xFFF,
+                instruction_array[0][lane].br_dir) != instruction_array[0][lane].br_dir)) {
                     mispred_br_count++;
                     instruction_array[0][lane].br_dir |= 2; // 10 indicates misprediction for MEM
                     flush = true;
@@ -151,7 +156,7 @@ void Pipeline::EX() {
 
 void Pipeline:: MEM() {
     for (int lane=0; lane<PIPE_WIDTH; lane++) {
-        if (instruction_array[3][lane].opcode == OP_CBR && instruction_array[3][lane].br_dir & 0b00000010) {
+        if (instruction_array[3][lane].opcode == OP_CBR && instruction_array[3][lane].br_dir & 0b10) {
             flush = false;
             break;
         }
