@@ -1,40 +1,26 @@
-FLAGS = -std=c++20 -c -MP -MDD
-DBGFLAGS = -std=c++20 -g -O0 -Wall -Wextra -c -MP -MDD
+FLAGS = -std=c++20 -c -MP -MMD
 
-OBJ:
-	mkdir -p build/obj
-	OBJ = build/obj
+BIN = build/bin
+OBJ = build/obj
 
-BIN:
-	mkdir -p build/bin
+all: $(BIN)/simulator
 
-$(BIN)/simulator: $(OBJ)/%
-	g++ $(OBJ)/% -o $@ -lboost_iostreams
+$(BIN)/simulator: $(OBJ)/simulator.o $(OBJ)/pipeline.o $(OBJ)/gshare.o | $(BIN)
+	g++ $^ -o $@ -lboost_iostreams
 
-pipeline.o: pipeline.cpp pipeline.hpp instruction.hpp
-	g++ $(FLAGS) pipeline.cpp -o pipeline.o
+$(OBJ)/%.o: src/%.cpp | $(OBJ)
+	g++ $(FLAGS) $< -o $@
 
-simulator.o: simulator.cpp pipeline.hpp instruction.hpp
-	g++ $(FLAGS) simulator.cpp -o simulator.o
+$(OBJ) $(BIN):
+	mkdir -p $@
 
-gshare.o: gshare.cpp gshare.hpp
-	g++ $(FLAGS) gshare.cpp -o gshare.o
+-include $(OBJ)/simulator.d $(OBJ)/pipeline.d $(OBJ)/gshare.d
+
+debug:
+	make FLAGS="$(FLAGS) -g -O0 -Wall -Wextra"
 
 clean:
-	rm -f simulator.o pipeline.o gshare.o simulator
-
-
-simulator_dbg: simulator_dbg.o pipeline_dbg.o
-	g++ simulator_dbg.o pipeline_dbg.o -o simulator_dbg -lboost_iostreams
-
-simulator_dbg.o: simulator.cpp pipeline.hpp instruction.hpp
-	g++ $(DBGFLAGS) simulator.cpp -o simulator_dbg.o
-
-pipeline_dbg.o: pipeline.cpp pipeline.hpp instruction.hpp
-	g++ $(DBGFLAGS) pipeline.cpp -o pipeline_dbg.o
-
-clean_dbg:
-	rm -f simulator_dbg.o pipeline_dbg.o simulator_dbg
+	rm -rf build
 
 .PHONY:
-	clean clean_dbg
+	clean debug
