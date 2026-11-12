@@ -1,2 +1,5 @@
 build/
 .vscode/
+traces/
+!traces/sml.ptr.gz
+test-results/

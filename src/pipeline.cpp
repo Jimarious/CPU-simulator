@@ -10,10 +10,77 @@
 
 using namespace std;
 
-int check_depend(Instruction young, Instruction old) {
-    return old.rd_used && ((young.rs1_used && young.rs1 == old.rd)
-    || (young.rs2_used && young.rs2 == old.rd))
-    || (young.cc_r && old.cc_w);
+void Pipeline::update_stall_for_rs1(int lane_young) {
+    for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) {
+        if (!instruction_array[0][lane_old].rd_used) break;
+        if (lane_young > lane_old
+        && instruction_array[0][lane_young].rs1 == instruction_array[0][lane_old].rd) {
+            min_stalled_lane = min(min_stalled_lane, lane_young);
+            return;
+        }
+    }
+    for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) {     
+        if (instruction_array[0][lane_young].rs1 == instruction_array[1][lane_old].rd) {
+            if (!FWD_EXE || instruction_array[1][lane_old].opcode == OP_LD)
+                min_stalled_lane = min(min_stalled_lane, lane_young);
+            return;
+        }
+    }
+    for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) { 
+        if (instruction_array[0][lane_young].rs1 == instruction_array[2][lane_old].rd) {
+            if (!FWD_MEM)
+                min_stalled_lane = min(min_stalled_lane, lane_young);
+            return;
+        }
+    }
+}
+
+void Pipeline::update_stall_for_rs2(int lane_young) {
+    for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) {
+        if (!instruction_array[0][lane_old].rd_used) break;
+        if (lane_young > lane_old
+        && instruction_array[0][lane_young].rs2 == instruction_array[0][lane_old].rd) {
+            min_stalled_lane = min(min_stalled_lane, lane_young);
+            return;
+        }
+    }
+    for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) {     
+        if (instruction_array[0][lane_young].rs2 == instruction_array[1][lane_old].rd) {
+            if (!FWD_EXE || instruction_array[1][lane_old].opcode == OP_LD)
+                min_stalled_lane = min(min_stalled_lane, lane_young);
+            return;
+        }
+    }
+    for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) { 
+        if (instruction_array[0][lane_young].rs2 == instruction_array[2][lane_old].rd) {
+            if (!FWD_MEM)
+                min_stalled_lane = min(min_stalled_lane, lane_young);
+            return;
+        }
+    }
+}
+
+void Pipeline::update_stall_for_cc(int lane_young) {
+    for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) {
+        if (lane_young > lane_old && instruction_array[0][lane_old].cc_w) {
+            min_stalled_lane = min(min_stalled_lane, lane_young);
+            return;
+        }
+    }
+    for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) {
+        if (instruction_array[1][lane_old].cc_w) {
+            if (!FWD_EXE || instruction_array[1][lane_old].opcode == OP_LD)
+                min_stalled_lane = min(min_stalled_lane, lane_young);
+            return;
+        }
+    }
+    for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) {
+        if (instruction_array[2][lane_old].cc_w) {
+            if (!FWD_MEM)
+                min_stalled_lane = min(min_stalled_lane, lane_young);
+            break;
+        }
+    }
 }
 
 
@@ -138,16 +205,12 @@ void Pipeline::IF() {
 void Pipeline::ID() {
     min_stalled_lane = PIPE_WIDTH;
     for (int lane_young=0; lane_young<PIPE_WIDTH; lane_young++) {
-        for (int lane_old=0; lane_old<PIPE_WIDTH; lane_old++) {
-            if (lane_young > lane_old
-            && check_depend(instruction_array[0][lane_young], instruction_array[0][lane_old]))
-                min_stalled_lane = min(min_stalled_lane, lane_young);
-            if (check_depend(instruction_array[0][lane_young], instruction_array[1][lane_old])
-            && (!FWD_EXE || instruction_array[1][lane_old].opcode == OP_LD))
-                min_stalled_lane = min(min_stalled_lane, lane_young);
-            else if (check_depend(instruction_array[0][lane_young], instruction_array[2][lane_old]) && !FWD_MEM)
-                min_stalled_lane = min(min_stalled_lane, lane_young);
-        }
+        if (instruction_array[0][lane_young].rs1_used)
+            update_stall_for_rs1(lane_young);
+        if (instruction_array[0][lane_young].rs2_used) 
+            update_stall_for_rs2(lane_young);
+        if (instruction_array[0][lane_young].cc_r)
+            update_stall_for_cc(lane_young);
     }
 }
 
