@@ -3,15 +3,6 @@ import re
 import subprocess
 
 
-def get_stat(name):
-        match = re.search(
-            rf"{name}\s*:\s*([\d.]+)",
-            result.stdout
-        )
-        assert match is not None, f"Missing {name} in simulator output"
-        return match.group(1)
-
-
 @pytest.mark.parametrize(
     "trace_file, pipe_width, forwardings_enable, br_pred_policy, "
     "expected_inst, expected_cycles, expected_cpi, "
