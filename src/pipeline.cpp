@@ -12,22 +12,23 @@ using namespace std;
 
 void Pipeline::update_stall_for_rs1(int lane_young) {
     for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) {
-        if (!instruction_array[0][lane_old].rd_used) break;
-        if (lane_young > lane_old
+        if (lane_young > lane_old && instruction_array[0][lane_old].rd_used
         && instruction_array[0][lane_young].rs1 == instruction_array[0][lane_old].rd) {
             min_stalled_lane = min(min_stalled_lane, lane_young);
             return;
         }
     }
     for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) {     
-        if (instruction_array[0][lane_young].rs1 == instruction_array[1][lane_old].rd) {
+        if (instruction_array[1][lane_old].rd_used
+        && instruction_array[0][lane_young].rs1 == instruction_array[1][lane_old].rd) {
             if (!FWD_EXE || instruction_array[1][lane_old].opcode == OP_LD)
                 min_stalled_lane = min(min_stalled_lane, lane_young);
             return;
         }
     }
     for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) { 
-        if (instruction_array[0][lane_young].rs1 == instruction_array[2][lane_old].rd) {
+        if (instruction_array[2][lane_old].rd_used
+        && instruction_array[0][lane_young].rs1 == instruction_array[2][lane_old].rd) {
             if (!FWD_MEM)
                 min_stalled_lane = min(min_stalled_lane, lane_young);
             return;
@@ -37,22 +38,23 @@ void Pipeline::update_stall_for_rs1(int lane_young) {
 
 void Pipeline::update_stall_for_rs2(int lane_young) {
     for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) {
-        if (!instruction_array[0][lane_old].rd_used) break;
-        if (lane_young > lane_old
+        if (lane_young > lane_old && instruction_array[0][lane_old].rd_used
         && instruction_array[0][lane_young].rs2 == instruction_array[0][lane_old].rd) {
             min_stalled_lane = min(min_stalled_lane, lane_young);
             return;
         }
     }
     for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) {     
-        if (instruction_array[0][lane_young].rs2 == instruction_array[1][lane_old].rd) {
+        if (instruction_array[1][lane_old].rd_used
+        && instruction_array[0][lane_young].rs2 == instruction_array[1][lane_old].rd) {
             if (!FWD_EXE || instruction_array[1][lane_old].opcode == OP_LD)
                 min_stalled_lane = min(min_stalled_lane, lane_young);
             return;
         }
     }
     for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) { 
-        if (instruction_array[0][lane_young].rs2 == instruction_array[2][lane_old].rd) {
+        if (instruction_array[2][lane_old].rd_used
+        && instruction_array[0][lane_young].rs2 == instruction_array[2][lane_old].rd) {
             if (!FWD_MEM)
                 min_stalled_lane = min(min_stalled_lane, lane_young);
             return;
@@ -154,6 +156,9 @@ void Pipeline::run() { // stalls are one stage earlier so that only IF needs sor
         EX();
         MEM();
         //WB();
+        if (cycle_count == 10000) {
+            cout << "kristo\n";
+        }
         cycle_count++;
     }
 }
