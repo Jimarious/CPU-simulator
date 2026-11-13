@@ -153,12 +153,8 @@ void Pipeline::run() { // stalls are one stage earlier so that only IF needs sor
             });
         })) return;
         ID();
-        EX();
         MEM();
-        //WB();
-        if (cycle_count == 10000) {
-            cout << "kristo\n";
-        }
+
         cycle_count++;
     }
 }
@@ -217,9 +213,6 @@ void Pipeline::ID() {
         if (instruction_array[0][lane_young].cc_r)
             update_stall_for_cc(lane_young);
     }
-}
-
-void Pipeline::EX() {
 }
 
 void Pipeline:: MEM() {

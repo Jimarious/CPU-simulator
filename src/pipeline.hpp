@@ -32,9 +32,7 @@ private:
 
     void IF();
     void ID();
-    void EX();
     void MEM();
-    void WB();
 
     void update_stall_for_rs1(int lane_young);
     void update_stall_for_rs2(int lane_young);

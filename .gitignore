@@ -1,5 +1,2 @@
 build/
 .vscode/
-traces/*
-!traces/sml.ptr.gz
-!traces/gcc.ptr.gz
