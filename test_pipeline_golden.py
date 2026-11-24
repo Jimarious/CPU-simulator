@@ -22,7 +22,7 @@ import subprocess
         "gcc-A1", "gcc-A2", "gcc-A3", "gcc-B1", "gcc-B2"
     ]
 )
-def test_golden(
+def test_pipeline(
     trace_file,
     pipe_width,
     forwardings_enable,

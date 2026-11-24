@@ -1,8 +1,7 @@
 #include "instruction.hpp"
 #include "gshare.hpp"
+#include "cache.hpp"
 #include <optional>
-#include <array>
-#include <fstream>
 #include <boost/iostreams/filtering_stream.hpp>
 
 class Pipeline {
@@ -24,6 +23,7 @@ private:
     boost::iostreams::filtering_istream instruction_file;
     std::vector<Instruction> instruction_array[5];
     std::optional<Gshare> gshare;
+    std::optional<Cache> cache;
 
     int instruction_count = 0;
     int cycle_count = 0;

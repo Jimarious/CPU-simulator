@@ -3,9 +3,8 @@ FLAGS = -std=c++20 -c -MP -MMD
 BIN = build/bin
 OBJ = build/obj
 
-all: $(BIN)/simulator
-
-$(BIN)/simulator: $(OBJ)/simulator.o $(OBJ)/pipeline.o $(OBJ)/gshare.o | $(BIN)
+$(BIN)/simulator: $(OBJ)/simulator.o $(OBJ)/pipeline.o \
+				  $(OBJ)/gshare.o $(OBJ)/cache.o | $(BIN)
 	g++ $^ -o $@ -lboost_iostreams
 
 $(OBJ)/%.o: src/%.cpp | $(OBJ)

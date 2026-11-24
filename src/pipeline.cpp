@@ -11,8 +11,8 @@
 using namespace std;
 
 void Pipeline::update_stall_for_rs1(int lane_young) {
-    for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) {
-        if (lane_young > lane_old && instruction_array[0][lane_old].rd_used
+    for (int lane_old=lane_young-1; lane_old>=0; lane_old--) {
+        if (instruction_array[0][lane_old].rd_used
         && instruction_array[0][lane_young].rs1 == instruction_array[0][lane_old].rd) {
             min_stalled_lane = min(min_stalled_lane, lane_young);
             return;
@@ -37,8 +37,8 @@ void Pipeline::update_stall_for_rs1(int lane_young) {
 }
 
 void Pipeline::update_stall_for_rs2(int lane_young) {
-    for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) {
-        if (lane_young > lane_old && instruction_array[0][lane_old].rd_used
+    for (int lane_old=lane_young-1; lane_old>=0; lane_old--) {
+        if (instruction_array[0][lane_old].rd_used
         && instruction_array[0][lane_young].rs2 == instruction_array[0][lane_old].rd) {
             min_stalled_lane = min(min_stalled_lane, lane_young);
             return;
@@ -63,8 +63,8 @@ void Pipeline::update_stall_for_rs2(int lane_young) {
 }
 
 void Pipeline::update_stall_for_cc(int lane_young) {
-    for (int lane_old=PIPE_WIDTH-1; lane_old>=0; lane_old--) {
-        if (lane_young > lane_old && instruction_array[0][lane_old].cc_w) {
+    for (int lane_old=lane_young-1; lane_old>=0; lane_old--) {
+        if (instruction_array[0][lane_old].cc_w) {
             min_stalled_lane = min(min_stalled_lane, lane_young);
             return;
         }
@@ -85,34 +85,26 @@ void Pipeline::update_stall_for_cc(int lane_young) {
     }
 }
 
-
 Pipeline::Pipeline(int argc, char *argv[]) {
     for (int arg_idx = 1; arg_idx < argc; arg_idx++) {
         if (!strcmp(argv[arg_idx], "-pipewidth")) {
-            if (++arg_idx == argc) {
-                throw runtime_error("Expected pipewidth value\n");
-            }
-            auto [ptr, err] = from_chars(argv[arg_idx], argv[arg_idx]+strlen(argv[arg_idx]), PIPE_WIDTH);
-            if (err != errc{} || ptr != argv[arg_idx]+strlen(argv[arg_idx])
-                || PIPE_WIDTH < 1 || PIPE_WIDTH > 8)  {
-                throw runtime_error("Invalid pipewidth value\n");
-            }
+            PIPE_WIDTH = parse_number_arg(argv, arg_idx, argc, 1, 8);
         } else if (!strcmp(argv[arg_idx], "-bpredpolicy")) {
-            if (++arg_idx == argc) {
-                throw runtime_error("Expected bpredpolicy value\n");
-            }
-            auto [ptr, err] = from_chars(argv[arg_idx], argv[arg_idx]+strlen(argv[arg_idx]), BR_PRED);
-            if (ptr != argv[arg_idx]+strlen(argv[arg_idx]) || err != errc{}
-                || BR_PRED < 0 || BR_PRED > 2) {
-                    throw runtime_error("Invalid bpredpolicy value\n");
-            }
-            if (BR_PRED == 2) {
-                gshare.emplace();
-            }
+            PIPE_WIDTH = parse_number_arg(argv, arg_idx, argc, 0, 2);
         } else if (!strcmp(argv[arg_idx], "-enableexefwd")) {
             FWD_EXE = true;
         } else if (!strcmp(argv[arg_idx], "-enablememfwd")) {
             FWD_MEM = true;
+        } else if (!strcmp(argv[arg_idx], "-simcache")) {
+            cache.emplace();
+        } else if (!strcmp(argv[arg_idx], "-totalblocks")) {
+            // TD: kristo
+        } else if (!strcmp(argv[arg_idx], "-associativity")) {
+            // TD: kristo
+        } else if (!strcmp(argv[arg_idx], "-blocksize")) {
+            // TD: kristo
+        } else if (!strcmp(argv[arg_idx], "-evictionpolicy")) {
+            // TD: kristo
         } else if (std::filesystem::is_regular_file(argv[arg_idx])) {
             if (instruction_file.is_complete()) {
                 throw runtime_error("Multiple files provided\n");
@@ -222,4 +214,17 @@ void Pipeline:: MEM() {
             break;
         }
     }
+}
+
+int parse_number_arg(char *argv[], int &arg_idx, int argc, int left_bound, int right_bound) {
+    int pipe_width;
+    if (++arg_idx == argc) {
+        throw runtime_error("Expected pipewidth value\n");
+    }
+    auto [ptr, err] = from_chars(argv[arg_idx], argv[arg_idx]+strlen(argv[arg_idx]), pipe_width);
+    if (err != errc{} || ptr != argv[arg_idx]+strlen(argv[arg_idx])
+        || pipe_width < left_bound || pipe_width > right_bound)  {
+        throw runtime_error("Invalid pipewidth value\n");
+    }
+    return pipe_width;
 }
