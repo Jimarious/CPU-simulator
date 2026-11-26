@@ -7,11 +7,9 @@
 class Pipeline {
 public:
     Pipeline (int argc, char *argv[]);
+    boost::iostreams::filtering_istream instruction_file;
     void run();
-    int get_cycle_count();
-    int get_instruction_count();
-    int get_total_br_count();
-    int get_mispred_br_count();
+    void print_stats();
 
 private:
     int PIPE_WIDTH = 1;
@@ -20,10 +18,9 @@ private:
     int min_stalled_lane;
     bool flush = false;
     bool end = false;
-    boost::iostreams::filtering_istream instruction_file;
     std::vector<Instruction> instruction_array[5];
     std::optional<Gshare> gshare;
-    std::optional<Cache> cache;
+    std::optional<Cache> L1_cache;
 
     int instruction_count = 0;
     int cycle_count = 0;

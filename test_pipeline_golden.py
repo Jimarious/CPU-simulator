@@ -45,8 +45,8 @@ def test_pipeline(
         assert match is not None, f"Missing {name} in simulator output"
         return match.group(1)
 
-    assert int(get_stat("LAB2_NUM_INST")) == expected_inst
-    assert int(get_stat("LAB2_NUM_CYCLES")) == expected_cycles
+    assert int(get_stat("CORE_0_INST")) == expected_inst
+    assert int(get_stat("CORE_0_CYCLES")) == expected_cycles
     assert float(get_stat("LAB2_CPI")) == pytest.approx(expected_cpi, abs=0.001)
     assert int(get_stat("LAB2_BPRED_BRANCHES")) == expected_branches
     assert int(get_stat("LAB2_BPRED_MISPRED")) == expected_mispred

@@ -4,11 +4,39 @@
 #include <charconv>
 #include <cstring>
 #include <algorithm>
+#include <iomanip>
 #include <filesystem>
-#include <boost/iostreams/filter/gzip.hpp>
-#include <boost/iostreams/device/file.hpp>
 
 using namespace std;
+
+Pipeline::Pipeline(int argc, char *argv[]) {
+    for (int arg_idx = 1; arg_idx < argc; arg_idx++) {
+        if (!strcmp(argv[arg_idx], "-pipewidth")) {
+            PIPE_WIDTH = parse_number_arg(argv, arg_idx, argc, 1, 8);
+        } else if (!strcmp(argv[arg_idx], "-bpredpolicy")) {
+            PIPE_WIDTH = parse_number_arg(argv, arg_idx, argc, 0, 2);
+        } else if (!strcmp(argv[arg_idx], "-enableexefwd")) {
+            FWD_EXE = true;
+        } else if (!strcmp(argv[arg_idx], "-enablememfwd")) {
+            FWD_MEM = true;
+        } else if (!strcmp(argv[arg_idx], "-simcache")) {
+            L1_cache.emplace();
+        } else if (!strcmp(argv[arg_idx], "-totalblocks")) {
+            // TD: kristo
+        } else if (!strcmp(argv[arg_idx], "-associativity")) {
+            // TD: kristo
+        } else if (!strcmp(argv[arg_idx], "-blocksize")) {
+            // TD: kristo
+        } else if (!strcmp(argv[arg_idx], "-evictionpolicy")) {
+            // TD: kristo
+        } else if (!std::filesystem::is_regular_file(argv[arg_idx])) {
+            throw runtime_error(string("Invalid argument or non existing file: \"")
+            + argv[arg_idx] + "\"\n");
+        }
+    }
+    for (int i=0; i<5; i++)  instruction_array[i].resize(PIPE_WIDTH);
+    min_stalled_lane = PIPE_WIDTH;
+}
 
 void Pipeline::update_stall_for_rs1(int lane_young) {
     for (int lane_old=lane_young-1; lane_old>=0; lane_old--) {
@@ -85,48 +113,6 @@ void Pipeline::update_stall_for_cc(int lane_young) {
     }
 }
 
-Pipeline::Pipeline(int argc, char *argv[]) {
-    for (int arg_idx = 1; arg_idx < argc; arg_idx++) {
-        if (!strcmp(argv[arg_idx], "-pipewidth")) {
-            PIPE_WIDTH = parse_number_arg(argv, arg_idx, argc, 1, 8);
-        } else if (!strcmp(argv[arg_idx], "-bpredpolicy")) {
-            PIPE_WIDTH = parse_number_arg(argv, arg_idx, argc, 0, 2);
-        } else if (!strcmp(argv[arg_idx], "-enableexefwd")) {
-            FWD_EXE = true;
-        } else if (!strcmp(argv[arg_idx], "-enablememfwd")) {
-            FWD_MEM = true;
-        } else if (!strcmp(argv[arg_idx], "-simcache")) {
-            cache.emplace();
-        } else if (!strcmp(argv[arg_idx], "-totalblocks")) {
-            // TD: kristo
-        } else if (!strcmp(argv[arg_idx], "-associativity")) {
-            // TD: kristo
-        } else if (!strcmp(argv[arg_idx], "-blocksize")) {
-            // TD: kristo
-        } else if (!strcmp(argv[arg_idx], "-evictionpolicy")) {
-            // TD: kristo
-        } else if (std::filesystem::is_regular_file(argv[arg_idx])) {
-            if (instruction_file.is_complete()) {
-                throw runtime_error("Multiple files provided\n");
-            }
-            boost::iostreams::file_source instruction_file_gz(argv[arg_idx], ios::binary);
-            if(!instruction_file_gz.is_open()) {
-                throw runtime_error(string("Problem opening: \"") + argv[arg_idx] + "\"\n");
-            }
-            instruction_file.push(boost::iostreams::gzip_decompressor());
-            instruction_file.push(instruction_file_gz);
-        } else {
-            throw runtime_error(string("Invalid argument or non existing file: \"")
-            + argv[arg_idx] + "\"\n");
-        }
-    }
-    if (!instruction_file.is_complete()) {
-        throw runtime_error("No trace file provided\n");
-    }
-    for (int i=0; i<5; i++)  instruction_array[i].resize(PIPE_WIDTH);
-    min_stalled_lane = PIPE_WIDTH;
-}
-
 void Pipeline::run() { // stalls are one stage earlier so that only IF needs sort
     while (1) {
         instruction_array[4] = instruction_array[3];
@@ -149,22 +135,6 @@ void Pipeline::run() { // stalls are one stage earlier so that only IF needs sor
 
         cycle_count++;
     }
-}
-
-int Pipeline::get_instruction_count() {
-    return instruction_count;
-}
-
-int Pipeline::get_cycle_count() {
-    return cycle_count;
-}
-
-int Pipeline::get_total_br_count() {
-    return total_br_count;
-}
-
-int Pipeline::get_mispred_br_count() {
-    return mispred_br_count;
 }
 
 void Pipeline::IF() {
@@ -214,6 +184,31 @@ void Pipeline:: MEM() {
             break;
         }
     }
+}
+
+void Pipeline::print_stats() {
+    if (cache.has_value()) {
+        for (int core_idx=0; core_idx<2; core_idx++) {
+            
+        }
+    } else {
+        cout << left << setw(22) << "LAB2_NUM_INST" << ":"
+        << right << setw(22) << instruction_count << "\n";
+        cout << left << setw(22) << "LAB2_NUM_CYCLES" << ":"
+        << right << setw(22) << cycle_count << "\n";
+        cout << left << setw(22) << "LAB2_CPI" << ":"
+        << right << setw(22)
+        << static_cast<float>(cycle_count)/instruction_count << "\n";
+        cout << left << setw(22) << "LAB2_BPRED_BRANCHES" << ":"
+        << right << setw(22) << total_br_count << "\n";
+        cout << left << setw(22) << "LAB2_BPRED_MISPRED" << ":"
+        << right << setw(22) << mispred_br_count << "\n";
+
+        cout << left << setw(26) << "CYCLES" << ":"
+        << right << setw(22) << cycle_count << "\n";
+    }
+
+    return;
 }
 
 int parse_number_arg(char *argv[], int &arg_idx, int argc, int left_bound, int right_bound) {
