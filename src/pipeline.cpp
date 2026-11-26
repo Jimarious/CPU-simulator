@@ -22,6 +22,8 @@ Pipeline::Pipeline(int argc, char *argv[]) {
         } else if (!strcmp(argv[arg_idx], "-simcache")) {
             L1_cache.emplace();
         } else if (!strcmp(argv[arg_idx], "-totalblocks")) {
+            // TD: Any of these arguments emplaces the caches, so that simcache is optional if one of the other arguments exists
+            // TD: Do not concern yourself with L2 shared cache yet.
             // TD: kristo
         } else if (!strcmp(argv[arg_idx], "-associativity")) {
             // TD: kristo
