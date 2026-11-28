@@ -7,7 +7,7 @@
 class Pipeline {
 public:
     Pipeline (int argc, char *argv[]);
-    boost::iostreams::filtering_istream instruction_file;
+    boost::iostreams::filtering_istream trace_file;
     void run();
     void print_stats();
 
@@ -20,6 +20,7 @@ private:
     bool end = false;
     std::vector<Instruction> instruction_array[5];
     std::optional<Gshare> gshare;
+    std::optional<bool> enable_L1_cache;
     std::optional<Cache> L1_cache;
 
     int instruction_count = 0;

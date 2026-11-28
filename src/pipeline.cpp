@@ -20,22 +20,25 @@ Pipeline::Pipeline(int argc, char *argv[]) {
         } else if (!strcmp(argv[arg_idx], "-enablememfwd")) {
             FWD_MEM = true;
         } else if (!strcmp(argv[arg_idx], "-simcache")) {
-            L1_cache.emplace();
+            enable_L1_cache = true;
         } else if (!strcmp(argv[arg_idx], "-totalblocks")) {
-            // TD: Any of these arguments emplaces the caches, so that simcache is optional if one of the other arguments exists
-            // TD: Do not concern yourself with L2 shared cache yet.
-            // TD: kristo
+            L1_cache->totalblocks = parse_number_arg(argv, arg_idx, argc, 1, UINT32_MAX);
+            enable_L1_cache = true;
         } else if (!strcmp(argv[arg_idx], "-associativity")) {
-            // TD: kristo
+            L1_cache->associativity = parse_number_arg(argv, arg_idx, argc, 1, 16);
+            enable_L1_cache = true;
         } else if (!strcmp(argv[arg_idx], "-blocksize")) {
-            // TD: kristo
+            L1_cache->blocksize = parse_number_arg(argv, arg_idx, argc, 1, 1024);
+            enable_L1_cache = true;
         } else if (!strcmp(argv[arg_idx], "-evictionpolicy")) {
-            // TD: kristo
+            L1_cache->totalblocks = parse_number_arg(argv, arg_idx, argc, 0, 2);
+            enable_L1_cache = true;
         } else if (!std::filesystem::is_regular_file(argv[arg_idx])) {
             throw runtime_error(string("Invalid argument or non existing file: \"")
             + argv[arg_idx] + "\"\n");
         }
     }
+    if (enable_L1_cache) L1_cache.emplace();
     for (int i=0; i<5; i++)  instruction_array[i].resize(PIPE_WIDTH);
     min_stalled_lane = PIPE_WIDTH;
 }
@@ -146,7 +149,7 @@ void Pipeline::IF() {
     for (int lane=PIPE_WIDTH-min_stalled_lane; lane<PIPE_WIDTH; lane++) {
         if (end || flush) {
             instruction_array[0][lane] = Instruction{};
-        } else if (!instruction_file.read(reinterpret_cast<char*>(&instruction_array[0][lane]),
+        } else if (!trace_file.read(reinterpret_cast<char*>(&instruction_array[0][lane]),
         sizeof(Instruction))) {
             instruction_array[0][lane] = Instruction{};
             end = true;
@@ -189,9 +192,9 @@ void Pipeline:: MEM() {
 }
 
 void Pipeline::print_stats() {
-    if (cache.has_value()) {
+    if (L1_cache.has_value()) {
         for (int core_idx=0; core_idx<2; core_idx++) {
-            
+            // TD: print stuff
         }
     } else {
         cout << left << setw(22) << "LAB2_NUM_INST" << ":"
@@ -214,14 +217,14 @@ void Pipeline::print_stats() {
 }
 
 int parse_number_arg(char *argv[], int &arg_idx, int argc, int left_bound, int right_bound) {
-    int pipe_width;
+    int num;
     if (++arg_idx == argc) {
-        throw runtime_error("Expected pipewidth value\n");
+        throw runtime_error(std::string("Expected value for ") + argv[arg_idx-1] + "\n");
     }
-    auto [ptr, err] = from_chars(argv[arg_idx], argv[arg_idx]+strlen(argv[arg_idx]), pipe_width);
+    auto [ptr, err] = from_chars(argv[arg_idx], argv[arg_idx]+strlen(argv[arg_idx]), num);
     if (err != errc{} || ptr != argv[arg_idx]+strlen(argv[arg_idx])
-        || pipe_width < left_bound || pipe_width > right_bound)  {
-        throw runtime_error("Invalid pipewidth value\n");
+        || num < left_bound || num > right_bound)  {
+        throw runtime_error(std::string("Invalid") + argv[arg_idx-1] + "value\n");
     }
-    return pipe_width;
+    return num;
 }
